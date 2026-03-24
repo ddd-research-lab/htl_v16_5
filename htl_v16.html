@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>階層型リストツール v16</title>
+<style>
+/* ============================================================
+   階層型リストツール v16 — モダンUI・ダークモード・モバイル対応
+   ============================================================ */
+:root {
+  --bg:          #f4f3f0;
+  --surface:     #ffffff;
+  --surface2:    #f9f8f6;
+  --border:      #e8e4dc;
+  --border2:     #d4cfc4;
+  --text:        #1a1916;
+  --text2:       #6b6560;
+  --accent:      #2563eb;
+  --accent-lt:   #dbeafe;
+  --accent-dk:   #1d4ed8;
+  --green:       #16a34a;
+  --green-lt:    #dcfce7;
+  --orange:      #ea580c;
+  --orange-lt:   #ffedd5;
+  --red:         #dc2626;
+  --red-lt:      #fee2e2;
+  --yellow-lt:   #fef9c3;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+  --shadow:      0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.05);
+  --shadow-lg:   0 10px 30px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+  --radius:      10px;
+  --radius-sm:   6px;
+  --font:        'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --mono:        'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --transition:  0.18s cubic-bezier(.4,0,.2,1);
+}
+.dark {
+  --bg:        #0f0e0d;
+  --surface:   #1c1b19;
+  --surface2:  #252320;
+  --border:    #2e2c28;
+  --border2:   #3d3a34;
+  --text:      #f0ede8;
+  --text2:     #8a847a;
+  --accent:    #3b82f6;
+  --accent-lt: #1e3a5f;
+  --accent-dk: #60a5fa;
+  --green:     #22c55e;
+  --green-lt:  #14532d;
+  --orange:    #f97316;
+  --orange-lt: #431407;
+  --red:       #ef4444;
+  --red-lt:    #450a0a;
+  --yellow-lt: #422006;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.4);
+  --shadow:    0 4px 12px rgba(0,0,0,.5);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg);
+  color: var(--text);
+  transition: background var(--transition), color var(--transition);
+  min-height: 100vh;
+}
+
+/* ======== APP WRAPPER ======== */
+#htl-app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ======== HEADER ======== */
+.htl-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px 12px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+.htl-header-row1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.htl-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+.htl-logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.htl-logo-icon svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.htl-version {
+  font-size: .65rem;
+  font-family: var(--mono);
+  color: var(--text2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.htl-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.htl-autosave {
+  font-size: .7rem;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.htl-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background .3s;
+  flex-shrink: 0;
+}
+.htl-dot.saved  { background: var(--green); }
+.htl-dot.saving { background: var(--orange); animation: blink .6s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Dark mode toggle */
+.htl-darkmode-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 36px; height: 20px;
+  border-radius: 10px;
+  background: var(--border2);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.htl-darkmode-btn.on { background: var(--accent); }
+.htl-darkmode-btn::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+.htl-darkmode-btn.on::after { transform: translateX(16px); }
+
+/* ======== TOOLBAR ======== */
+.htl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.htl-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-family: var(--font);
+  font-size: .77rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform .1s, box-shadow var(--transition);
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
+}
+.htl-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.htl-btn:active { transform: scale(.96); }
+
+.htl-btn-primary { background: var(--accent); color: #fff; }
+.htl-btn-primary:hover { background: var(--accent-dk); box-shadow: 0 2px 8px rgba(37,99,235,.35); }
+.htl-btn-success { background: var(--green); color: #fff; }
+.htl-btn-success:hover { background: #15803d; box-shadow: 0 2px 8px rgba(22,163,74,.35); }
+.htl-btn-orange  { background: var(--orange); color: #fff; }
+.htl-btn-orange:hover { background: #c2410c; }
+.htl-btn-danger  { background: var(--red); color: #fff; }
+.htl-btn-danger:hover { background: #b91c1c; }
+.htl-btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+.htl-btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.htl-btn-ghost.active {
+  background: var(--accent-lt);
+  border-color: var(--accent);
+  color: var(--accent-dk);
+}
+.htl-divider { width: 1px; height: 22px; background: var(--border2); flex-shrink: 0; }
+
+/* ======== SHORTCUT HINT BAR ======== */
+.htl-hint {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  font-size: .7rem;
+  color: var(--text2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  transition: background var(--transition), border-color var(--transition);
+}
+.htl-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-bottom-width: 2px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.htl-hint span { display: flex; align-items: center; gap: 4px; }
+
+/* ======== MAIN AREA ======== */
+.htl-main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 12px 20px;
+  min-height: 280px;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+/* ======== TREE ======== */
+.htl-ul { list-style: none; padding: 0; }
+.htl-ul .htl-ul { padding-left: 24px; margin-top: 2px; }
+.htl-li { margin: 2px 0; position: relative; }
+.htl-ul .htl-ul > .htl-li::before {
+  content: '';
+  position: absolute;
+  left: -12px; top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+/* ======== NODE ======== */
+.htl-node-wrap { display: flex; align-items: stretch; gap: 0; }
+
+.htl-drag-handle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; flex-shrink: 0;
+  cursor: grab;
+  color: var(--border2);
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+  border-radius: var(--radius) 0 0 var(--radius);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.htl-drag-handle:active { cursor: grabbing; color: var(--accent); }
+.htl-drag-handle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.htl-li:hover > .htl-node-wrap > .htl-drag-handle { opacity: 1; color: var(--text2); }
+.htl-li:hover > .htl-node-wrap > .htl-drag-handle:hover { color: var(--accent); }
+
+.htl-node-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+  min-height: 38px;
+  position: relative;
+}
+.htl-li:hover > .htl-node-wrap > .htl-node-content {
+  border-color: var(--border2);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ======== COLLAPSE BUTTON ======== */
+.htl-collapse-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text2);
+  flex-shrink: 0;
+  transition: background var(--transition), transform var(--transition), color var(--transition);
+  font-size: 9px;
+}
+.htl-collapse-btn:hover { background: var(--surface2); color: var(--text); }
+.htl-collapse-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--transition); }
+.htl-collapse-btn.collapsed svg { transform: rotate(-90deg); }
+.htl-collapse-btn.no-children { visibility: hidden; }
+
+/* Children collapse animation */
+.htl-li > .htl-ul { overflow: hidden; transition: opacity var(--transition); }
+.htl-li.htl-collapsed > .htl-ul { display: none; }
+.htl-li.htl-collapsed > .htl-annotation { display: none !important; }
+
+/* ======== TEXT ======== */
+.htl-text {
+  flex: 1;
+  outline: none;
+  min-width: 30px;
+  line-height: 1.5;
+  cursor: default;
+  font-family: var(--font);
+  font-size: .9rem;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  word-break: break-word;
+}
+.htl-text[contenteditable="true"] {
+  cursor: text;
+  background: var(--accent-lt);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.htl-text:empty::before { content: "テキストを入力..."; color: var(--border2); pointer-events: none; }
+.htl-text b, .htl-text strong { font-weight: 700; }
+.htl-text i, .htl-text em { font-style: italic; }
+.htl-text u { text-decoration: underline; }
+.htl-text s { text-decoration: line-through; }
+.htl-text mark { background: #fde047; padding: 0 2px; border-radius: 2px; }
+.htl-text code { font-family: var(--mono); font-size: .85em; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+.htl-text a { color: var(--accent); text-decoration: underline; }
+
+/* ======== NODE ACTIONS ======== */
+.htl-node-actions {
+  display: flex; gap: 2px; flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.htl-li:hover > .htl-node-wrap > .htl-node-content .htl-node-actions,
+.htl-li > .htl-node-wrap > .htl-node-content:focus-within .htl-node-actions { opacity: 1; }
+.htl-tools-hidden .htl-node-actions { opacity: 0 !important; }
+
+.htl-action-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: .72rem;
+  font-family: var(--font);
+  transition: background var(--transition), color var(--transition);
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.htl-action-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.htl-action-btn:hover { background: var(--surface2); color: var(--text); }
+.htl-action-btn.htl-add:hover { background: var(--green-lt); color: var(--green); }
+.htl-action-btn.htl-note:hover { background: var(--accent-lt); color: var(--accent); }
+.htl-action-btn.htl-note.open { color: var(--accent); background: var(--accent-lt); }
+.htl-action-btn.htl-del:hover { background: var(--red-lt); color: var(--red); }
+
+/* ======== COLOR BUTTON ======== */
+.htl-color-wrap { position: relative; flex-shrink: 0; }
+.htl-color-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,.6);
+  box-shadow: 0 0 0 1px var(--border2);
+  transition: transform var(--transition), box-shadow var(--transition);
+  display: block;
+}
+.htl-color-btn:hover { transform: scale(1.2); box-shadow: 0 0 0 2px var(--accent); }
+
+/* ======== COLOR POPUP ======== */
+.htl-color-popup {
+  display: none;
+  position: absolute;
+  right: 0; top: calc(100% + 6px);
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  min-width: 220px;
+}
+.htl-color-popup.open { display: block; }
+.htl-popup-label {
+  font-size: .63rem; font-weight: 700; color: var(--text2);
+  letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px;
+}
+.htl-palette-grid {
+  display: grid; grid-template-columns: repeat(8,1fr); gap: 3px; margin-bottom: 8px;
+}
+.htl-swatch {
+  all: unset; box-sizing: border-box;
+  width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform .1s, border-color .1s;
+  display: block;
+}
+.htl-swatch:hover { transform: scale(1.2); border-color: var(--accent); }
+.htl-swatch.active { border-color: var(--text); transform: scale(1.1); }
+.htl-popup-divider { height: 1px; background: var(--border); margin: 6px 0; }
+.htl-custom-row { display: flex; align-items: center; gap: 6px; }
+.htl-custom-row label { font-size: .7rem; color: var(--text2); flex-shrink: 0; }
+.htl-custom-row input[type="color"] {
+  all: unset; width: 30px; height: 22px; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--border); overflow: hidden; flex-shrink: 0;
+}
+.htl-hex-input {
+  all: unset; box-sizing: border-box; flex: 1;
+  padding: 3px 7px; font-family: var(--mono); font-size: .7rem;
+  color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px;
+}
+.htl-hex-input:focus { border-color: var(--accent); outline: none; }
+.htl-reset-color-btn {
+  all: unset; box-sizing: border-box; margin-top: 6px;
+  display: block; width: 100%; text-align: center;
+  padding: 5px; font-size: .7rem; font-family: var(--font);
+  color: var(--text2); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.htl-reset-color-btn:hover { background: var(--accent-lt); color: var(--accent); }
+
+/* ======== RTE FLOATING BAR ======== */
+.htl-rte-bar {
+  display: none;
+  position: absolute;
+  top: -46px; left: 0;
+  z-index: 200;
+  background: var(--text);
+  border-radius: 8px;
+  padding: 4px 6px;
+  box-shadow: var(--shadow-lg);
+  gap: 2px; align-items: center;
+  white-space: nowrap;
+}
+.htl-rte-bar.visible { display: flex; }
+.htl-rte-bar::after {
+  content: ''; position: absolute;
+  bottom: -5px; left: 14px;
+  width: 10px; height: 10px;
+  background: var(--text);
+  transform: rotate(45deg);
+  border-radius: 2px; z-index: -1;
+}
+.htl-rte-btn {
+  all: unset; box-sizing: border-box;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px; cursor: pointer;
+  font-size: .8rem; font-weight: 700;
+  color: #aaa;
+  transition: background .12s, color .12s;
+  font-family: var(--font);
+}
+.htl-rte-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+.htl-rte-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.htl-rte-sep { width: 1px; height: 18px; background: rgba(255,255,255,.15); margin: 0 2px; }
+.htl-rte-color-wrap {
+  position: relative; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 5px;
+  transition: background .12s;
+}
+.htl-rte-color-wrap:hover { background: rgba(255,255,255,.15); }
+.htl-rte-color-wrap input[type="color"] {
+  position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;
+}
+.htl-rte-fontsize {
+  all: unset; background: rgba(255,255,255,.1); color: #bbb;
+  font-size: .68rem; font-family: var(--mono);
+  border-radius: 4px; padding: 2px 4px; width: 42px;
+  text-align: center; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.1);
+}
+.htl-rte-fontsize option { background: #1a1916; color: #fff; }
+
+/* ======== DRAG STATES ======== */
+.htl-dragging { opacity: .4; }
+.htl-dragging > .htl-node-wrap > .htl-node-content { background: var(--accent-lt) !important; border-style: dashed !important; }
+.htl-drop-before::before {
+  content: ''; display: block; position: absolute;
+  top: -2px; left: 0; right: 0; height: 3px;
+  background: var(--accent); border-radius: 2px; z-index: 10;
+}
+.htl-drop-after::after {
+  content: ''; display: block; position: absolute;
+  bottom: -2px; left: 0; right: 0; height: 3px;
+  background: var(--accent); border-radius: 2px; z-index: 10;
+}
+.htl-drop-child > .htl-node-wrap > .htl-node-content {
+  background: var(--accent-lt) !important;
+  border-color: var(--accent) !important;
+  border-style: dashed !important;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.2) !important;
+}
+.htl-placeholder {
+  list-style: none;
+  background: rgba(37,99,235,.08);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  min-height: 32px; margin: 2px 0;
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.htl-placeholder::after { content: 'ここに移動'; font-size: .7rem; color: var(--accent); font-weight: 600; }
+
+/* ======== ANNOTATION ======== */
+.htl-annotation {
+  display: none;
+  margin: 3px 0 5px 4px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  background: rgba(37,99,235,.04);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: background var(--transition);
+}
+.htl-annotation.open { display: block; }
+.htl-anno-rte-bar {
+  display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 8px;
+  padding: 5px 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  align-items: center;
+}
+.htl-anno-rte-btn {
+  all: unset; box-sizing: border-box;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; cursor: pointer;
+  font-size: .75rem; font-weight: 700; color: var(--text2);
+  transition: background var(--transition), color var(--transition);
+  font-family: var(--font);
+}
+.htl-anno-rte-btn:hover { background: var(--border); color: var(--text); }
+.htl-anno-rte-sep { width: 1px; height: 16px; background: var(--border2); margin: 0 2px; }
+.htl-anno-editor {
+  all: unset; box-sizing: border-box; display: block; width: 100%;
+  min-height: 80px; padding: 8px 10px;
+  font-family: var(--font); font-size: .85rem; line-height: 1.8;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  cursor: text; word-break: break-word; outline: none; overflow-wrap: break-word;
+  transition: border-color var(--transition), background var(--transition);
+}
+.htl-anno-editor:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.htl-anno-editor:empty::before { content: attr(data-placeholder); color: var(--border2); pointer-events: none; }
+.htl-anno-editor b, .htl-anno-editor strong { font-weight: 700; }
+.htl-anno-editor i, .htl-anno-editor em { font-style: italic; }
+.htl-anno-editor u { text-decoration: underline; }
+.htl-anno-editor s { text-decoration: line-through; }
+.htl-anno-editor mark { background: #fde047; padding: 0 2px; border-radius: 2px; }
+.htl-anno-editor code { font-family: var(--mono); font-size: .85em; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+.htl-anno-editor a { color: var(--accent); text-decoration: underline; }
+.htl-anno-editor img { max-width: 100%; display: block; margin: 5px 0; border-radius: 4px; }
+
+/* ======== INLINE MEDIA ======== */
+.htl-inline-img-wrap {
+  display: block; position: relative; margin: 8px 0; line-height: 0;
+  user-select: none; -webkit-user-select: none;
+}
+.htl-inline-img-wrap img {
+  display: block; max-width: 100%; border-radius: 5px;
+  border: 2px solid transparent; transition: border-color var(--transition); cursor: pointer;
+}
+.htl-inline-img-wrap:hover img, .htl-inline-img-wrap.selected img { border-color: var(--accent); }
+.htl-inline-img-toolbar {
+  display: none; position: absolute; top: 6px; left: 6px;
+  background: rgba(26,25,22,.88); border-radius: 6px;
+  padding: 3px 5px; gap: 3px; align-items: center; z-index: 100;
+  backdrop-filter: blur(4px);
+}
+.htl-inline-img-wrap:hover .htl-inline-img-toolbar,
+.htl-inline-img-wrap.selected .htl-inline-img-toolbar { display: flex; }
+.htl-inline-img-toolbar button {
+  all: unset; box-sizing: border-box;
+  padding: 3px 7px; border-radius: 4px; cursor: pointer;
+  font-size: .68rem; font-family: var(--mono); font-weight: 600;
+  color: #ccc; white-space: nowrap; transition: background .12s, color .12s;
+}
+.htl-inline-img-toolbar button:hover { background: rgba(255,255,255,.15); color: #fff; }
+.htl-inline-img-toolbar button.del:hover { background: rgba(220,38,38,.7); color: #fff; }
+.htl-img-slider-row {
+  display: flex; align-items: center; gap: 5px; margin-top: 4px;
+  padding: 5px 8px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 4px; flex-wrap: wrap;
+}
+.htl-img-slider-row input[type="range"] {
+  all: unset; flex: 1; min-width: 80px; height: 4px;
+  background: var(--border2); border-radius: 2px; cursor: pointer; appearance: auto;
+}
+.htl-img-slider-row input[type="number"] {
+  all: unset; box-sizing: border-box; width: 50px;
+  padding: 3px 5px; font-family: var(--mono); font-size: .7rem;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 4px; text-align: right;
+}
+.htl-img-slider-row span { font-size: .67rem; color: var(--text2); font-family: var(--mono); }
+.htl-img-slider-row button {
+  all: unset; box-sizing: border-box; padding: 2px 6px;
+  font-size: .67rem; font-family: var(--mono); font-weight: 600;
+  color: var(--text2); background: var(--surface);
+  border: 1px solid var(--border2); border-radius: 3px; cursor: pointer;
+  transition: background var(--transition);
+}
+.htl-img-slider-row button:hover { background: var(--accent-lt); color: var(--accent); }
+.htl-resize-handle {
+  position: absolute; bottom: 28px; right: 4px;
+  width: 16px; height: 16px; background: var(--accent);
+  border-radius: 3px; cursor: se-resize; opacity: 0;
+  transition: opacity var(--transition);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.htl-resize-handle svg { width: 10px; height: 10px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; }
+.htl-inline-img-wrap:hover .htl-resize-handle,
+.htl-inline-img-wrap.selected .htl-resize-handle { opacity: 1; }
+
+/* video */
+.htl-inline-video-wrap { display: block; position: relative; margin: 8px 0; user-select: none; }
+.htl-inline-video-inner {
+  position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+  border-radius: 6px; border: 2px solid transparent; background: #000;
+  transition: border-color var(--transition);
+}
+.htl-inline-video-wrap:hover .htl-inline-video-inner,
+.htl-inline-video-wrap.selected .htl-inline-video-inner { border-color: var(--accent); }
+.htl-inline-video-inner iframe, .htl-inline-video-inner video {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  border: none; border-radius: 4px;
+}
+.htl-inline-video-toolbar {
+  display: none; position: absolute; top: 10px; left: 10px;
+  background: rgba(26,25,22,.88); border-radius: 6px;
+  padding: 3px 5px; gap: 3px; align-items: center; z-index: 100;
+  backdrop-filter: blur(4px);
+}
+.htl-inline-video-wrap:hover .htl-inline-video-toolbar,
+.htl-inline-video-wrap.selected .htl-inline-video-toolbar { display: flex; }
+.htl-inline-video-toolbar button {
+  all: unset; box-sizing: border-box; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+  font-size: .68rem; font-family: var(--font); font-weight: 600;
+  color: #ccc; white-space: nowrap; transition: background .12s, color .12s;
+}
+.htl-inline-video-toolbar button:hover { background: rgba(255,255,255,.15); color: #fff; }
+.htl-inline-video-toolbar button.del:hover { background: rgba(220,38,38,.7); color: #fff; }
+.htl-video-label {
+  font-size: .68rem; color: var(--text2); font-family: var(--mono);
+  margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.htl-video-slider-row {
+  display: flex; align-items: center; gap: 5px; margin-top: 4px;
+  padding: 5px 8px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 4px; flex-wrap: wrap;
+}
+.htl-video-slider-row input[type="range"] {
+  all: unset; flex: 1; min-width: 80px; height: 4px;
+  background: var(--border2); border-radius: 2px; cursor: pointer; appearance: auto;
+}
+.htl-video-slider-row input[type="number"] {
+  all: unset; box-sizing: border-box; width: 50px;
+  padding: 3px 5px; font-family: var(--mono); font-size: .7rem;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 4px; text-align: right;
+}
+.htl-video-slider-row span { font-size: .67rem; color: var(--text2); font-family: var(--mono); white-space: nowrap; }
+.htl-video-slider-row button {
+  all: unset; box-sizing: border-box; padding: 2px 6px;
+  font-size: .67rem; font-family: var(--mono); font-weight: 600;
+  color: var(--text2); background: var(--surface);
+  border: 1px solid var(--border2); border-radius: 3px; cursor: pointer;
+  transition: background var(--transition);
+}
+.htl-video-slider-row button:hover { background: var(--accent-lt); color: var(--accent); }
+.htl-video-resize-handle {
+  position: absolute; bottom: 28px; right: 4px;
+  width: 16px; height: 16px; background: var(--accent);
+  border-radius: 3px; cursor: se-resize; opacity: 0;
+  transition: opacity var(--transition);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.htl-video-resize-handle svg { width: 10px; height: 10px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; }
+.htl-inline-video-wrap:hover .htl-video-resize-handle,
+.htl-inline-video-wrap.selected .htl-video-resize-handle { opacity: 1; }
+
+/* ======== PANELS ======== */
+.htl-panel {
+  display: none; margin-bottom: 8px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
+}
+.htl-panel.open { display: block; }
+.htl-panel-title {
+  font-size: .82rem; font-weight: 700; color: var(--text); margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.htl-panel-close {
+  all: unset; cursor: pointer; font-size: 1.1rem; color: var(--text2);
+  padding: 1px 6px; border-radius: 4px; line-height: 1;
+}
+.htl-panel-close:hover { background: var(--surface2); color: var(--text); }
+.htl-panel-textarea {
+  all: unset; box-sizing: border-box; display: block; width: 100%;
+  min-height: 110px; padding: 10px; font-family: var(--mono); font-size: .75rem;
+  line-height: 1.5; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); resize: vertical; margin-bottom: 10px;
+}
+.htl-panel-textarea:focus { border-color: var(--accent); outline: none; }
+.htl-panel-actions { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.htl-panel-msg {
+  font-size: .74rem; color: var(--green); margin-left: 6px; opacity: 0; transition: opacity .3s;
+}
+.htl-panel-msg.show { opacity: 1; }
+
+/* ======== FOOTER ======== */
+.htl-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 4px; font-size: .7rem; color: var(--text2);
+  flex-wrap: wrap; gap: 4px;
+}
+.htl-undo-redo { display: flex; gap: 4px; }
+.htl-ur-btn {
+  all: unset; box-sizing: border-box;
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: var(--radius-sm); cursor: pointer;
+  font-size: .72rem; font-family: var(--font); font-weight: 600;
+  color: var(--text2); background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: background var(--transition), color var(--transition);
+}
+.htl-ur-btn:hover:not(:disabled) { background: var(--accent-lt); color: var(--accent); border-color: var(--accent); }
+.htl-ur-btn:disabled { opacity: .4; cursor: not-allowed; }
+.htl-ur-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ======== TOAST ======== */
+.htl-toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--text); color: var(--bg);
+  font-family: var(--font); font-size: .8rem;
+  padding: 10px 16px; border-radius: 8px; box-shadow: var(--shadow-lg);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .3s, transform .3s; pointer-events: none;
+  z-index: 9999; max-width: 280px;
+}
+.htl-toast.show { opacity: 1; transform: translateY(0); }
+.htl-toast.err { background: var(--red); color: #fff; }
+
+/* ======== SHORTCUT HELP MODAL ======== */
+.htl-shortcut-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 1000;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.htl-shortcut-overlay.open { display: flex; }
+.htl-shortcut-modal {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  padding: 20px 24px; max-width: 420px; width: 90%;
+}
+.htl-shortcut-modal h3 { font-size: .9rem; font-weight: 800; margin-bottom: 14px; color: var(--text); }
+.htl-shortcut-table { width: 100%; border-collapse: collapse; }
+.htl-shortcut-table td {
+  padding: 5px 0; font-size: .78rem; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.htl-shortcut-table td:last-child { text-align: right; color: var(--text2); }
+.htl-shortcut-table tr:last-child td { border-bottom: none; }
+.htl-shortcut-close {
+  all: unset; display: block; box-sizing: border-box;
+  width: 100%; margin-top: 14px;
+  text-align: center; padding: 8px;
+  font-size: .8rem; font-family: var(--font); font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); cursor: pointer; color: var(--text2);
+  transition: background var(--transition);
+}
+.htl-shortcut-close:hover { background: var(--accent-lt); color: var(--accent); }
+
+/* ======== MOBILE ======== */
+@media (max-width: 640px) {
+  #htl-app { padding: 8px; }
+  .htl-header { padding: 10px 12px; }
+  .htl-toolbar { gap: 4px; }
+  .htl-btn { padding: 5px 9px; font-size: .72rem; }
+  .htl-btn span.btn-label { display: none; }
+  .htl-ul .htl-ul { padding-left: 16px; }
+  .htl-drag-handle { opacity: 1; }
+  .htl-node-actions { opacity: 1; }
+  .htl-hint { display: none; }
+}
+
+/* ======== HTML INFO BANNER ======== */
+#htl-html-info { display: none; margin-bottom: 8px; padding: 8px 10px; border-radius: 6px; font-size: .75rem; }
+.htl-tabs { display: flex; gap: 2px; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+.htl-tab {
+  all: unset; box-sizing: border-box;
+  padding: 6px 14px; font-family: var(--font); font-size: .78rem; font-weight: 600;
+  color: var(--text2); cursor: pointer; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: 1px solid transparent; border-bottom: none; margin-bottom: -1px;
+  transition: background var(--transition), color var(--transition);
+}
+.htl-tab:hover { background: var(--surface2); color: var(--text); }
+.htl-tab.active { background: var(--surface); border-color: var(--border); color: var(--text); }
+.htl-tab-pane { display: none; }
+.htl-tab-pane.active { display: block; }
+#htl-preview-frame {
+  width: 100%; min-height: 220px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: #fff;
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<div id="htl-app">
+
+<!-- HEADER -->
+<div class="htl-header">
+  <div class="htl-header-row1">
+    <div class="htl-logo">
+      <div class="htl-logo-icon">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="16" y2="6"/><line x1="6" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="12" y2="18"/></svg>
+      </div>
+      階層型リストツール
+    </div>
+    <span class="htl-version">v16.0</span>
+    <div class="htl-header-right">
+      <div class="htl-autosave">
+        <span id="htl-dot" class="htl-dot"></span>
+        <span id="htl-save-label">自動保存</span>
+      </div>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.7rem;color:var(--text2);">
+        <button id="htl-dark-btn" class="htl-darkmode-btn" title="ダークモード切替" aria-label="ダークモード"></button>
+        ダーク
+      </label>
+    </div>
+  </div>
+  <div class="htl-toolbar">
+    <button id="htl-add-root" class="htl-btn htl-btn-success">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span class="btn-label">新しい親ノード</span>
+    </button>
+    <div class="htl-divider"></div>
+    <button id="htl-json-save" class="htl-btn htl-btn-primary">
+      <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span class="btn-label">JSON保存</span>
+    </button>
+    <button id="htl-import-toggle" class="htl-btn htl-btn-ghost">
+      <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      <span class="btn-label">読み込み</span>
+    </button>
+    <button id="htl-html-export" class="htl-btn htl-btn-orange">
+      <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span class="btn-label">HTML書き出し</span>
+    </button>
+    <div class="htl-divider"></div>
+    <button id="htl-collapse-all" class="htl-btn htl-btn-ghost">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      <span class="btn-label">全折りたたみ</span>
+    </button>
+    <button id="htl-expand-all" class="htl-btn htl-btn-ghost">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <span class="btn-label">全展開</span>
+    </button>
+    <button id="htl-shortcut-help" class="htl-btn htl-btn-ghost">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+    <button id="htl-clear-all" class="htl-btn htl-btn-danger">
+      <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      <span class="btn-label">全削除</span>
+    </button>
+  </div>
+</div>
+
+<!-- HINT BAR -->
+<div class="htl-hint">
+  <span><kbd>⠿</kbd> ドラッグで移動</span>
+  <span><kbd>Enter</kbd> 同レベル追加</span>
+  <span><kbd>Tab</kbd> 子ノード追加</span>
+  <span><kbd>▶</kbd> 折りたたみ</span>
+  <span><kbd>Ctrl+Z</kbd> Undo</span>
+  <span><kbd>Ctrl+Y</kbd> Redo</span>
+  <span><kbd>Del</kbd> ノード削除</span>
+</div>
+
+<!-- PANELS -->
+<div id="htl-json-panel" class="htl-panel">
+  <div class="htl-panel-title">JSON保存（データのバックアップ用）<button class="htl-panel-close" data-panel="htl-json-panel">✕</button></div>
+  <textarea id="htl-json-textarea" class="htl-panel-textarea" readonly placeholder="ここにJSONが出力されます"></textarea>
+  <div class="htl-panel-actions">
+    <button id="htl-json-copy" class="htl-btn htl-btn-primary">コピー</button>
+    <span id="htl-json-msg" class="htl-panel-msg">✓ コピーしました</span>
+  </div>
+</div>
+<div id="htl-import-panel" class="htl-panel">
+  <div class="htl-panel-title">JSONを読み込む<button class="htl-panel-close" data-panel="htl-import-panel">✕</button></div>
+  <textarea id="htl-import-textarea" class="htl-panel-textarea" placeholder="ここにJSONを貼り付けてください"></textarea>
+  <div class="htl-panel-actions">
+    <button id="htl-import-exec" class="htl-btn htl-btn-primary">読み込む</button>
+    <button id="htl-restore-btn" class="htl-btn htl-btn-ghost">自動保存から復元</button>
+    <span id="htl-import-msg" class="htl-panel-msg"></span>
+  </div>
+</div>
+<div id="htl-html-panel" class="htl-panel">
+  <div class="htl-panel-title">HTML書き出し（ブログ貼り付け用）<button class="htl-panel-close" data-panel="htl-html-panel">✕</button></div>
+  <div id="htl-html-info"></div>
+  <div class="htl-tabs">
+    <button class="htl-tab active" data-tab="code">コード</button>
+    <button class="htl-tab" data-tab="preview">プレビュー</button>
+  </div>
+  <div id="htl-tab-code" class="htl-tab-pane active">
+    <textarea id="htl-html-textarea" class="htl-panel-textarea" style="min-height:160px" readonly placeholder="ここにHTMLが出力されます"></textarea>
+  </div>
+  <div id="htl-tab-preview" class="htl-tab-pane">
+    <iframe id="htl-preview-frame" frameborder="0" scrolling="auto"></iframe>
+  </div>
+  <div class="htl-panel-actions">
+    <button id="htl-html-copy" class="htl-btn htl-btn-orange">コピー</button>
+    <span id="htl-html-msg" class="htl-panel-msg">✓ コピーしました</span>
+    <span id="htl-html-chars" style="margin-left:auto;font-size:.7rem;color:var(--text2)"></span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="htl-main">
+  <ul id="htl-root" class="htl-ul"></ul>
+</div>
+
+<!-- FOOTER -->
+<div class="htl-footer">
+  <span id="htl-node-count">ノード: 0</span>
+  <div class="htl-undo-redo">
+    <button id="htl-undo" class="htl-ur-btn" disabled>
+      <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.52"/></svg>
+      Undo
+    </button>
+    <button id="htl-redo" class="htl-ur-btn" disabled>
+      Redo
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.52"/></svg>
+    </button>
+  </div>
+  <span style="font-size:.68rem;color:var(--border2)">v16.0</span>
+</div>
+
+</div><!-- #htl-app -->
+
+<!-- SHORTCUT MODAL -->
+<div id="htl-shortcut-overlay" class="htl-shortcut-overlay">
+  <div class="htl-shortcut-modal">
+    <h3>⌨️ キーボードショートカット</h3>
+    <table class="htl-shortcut-table">
+      <tr><td>ノード編集開始</td><td><kbd>ダブルクリック</kbd> / <kbd>F2</kbd></td></tr>
+      <tr><td>編集確定</td><td><kbd>Enter</kbd> / <kbd>Escape</kbd></td></tr>
+      <tr><td>同レベルに新ノード</td><td>編集中に <kbd>Enter</kbd></td></tr>
+      <tr><td>子ノードを追加</td><td>編集中に <kbd>Tab</kbd></td></tr>
+      <tr><td>ノード削除</td><td><kbd>Del</kbd>（空ノード選択時）</td></tr>
+      <tr><td>折りたたみ切替</td><td><kbd>Space</kbd>（ノード選択時）</td></tr>
+      <tr><td>全折りたたみ / 全展開</td><td><kbd>Ctrl+←</kbd> / <kbd>Ctrl+→</kbd></td></tr>
+      <tr><td>元に戻す / やり直し</td><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td></tr>
+    </table>
+    <button id="htl-shortcut-close" class="htl-shortcut-close">閉じる</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="htl-toast" class="htl-toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+var APP_ID      = 'htl-app';
+var STORAGE_KEY = 'htl_autosave_v16';
+var dragState   = { el: null, placeholder: null };
+var saveTimer   = null;
+var _dragGlobalReady = false;
+
+/* ======================================================
+   UNDO / REDO
+====================================================== */
+var _undoStack = [];
+var _redoStack = [];
+var _undoBusy  = false;
+var MAX_UNDO   = 80;
+
+function snapshot() {
+  if (_undoBusy) return;
+  var s = JSON.stringify(serializeTree($r()));
+  _undoStack.push(s);
+  if (_undoStack.length > MAX_UNDO) _undoStack.shift();
+  _redoStack = [];
+  updateUndoUI();
+}
+function undo() {
+  if (_undoStack.length === 0) return;
+  var cur = JSON.stringify(serializeTree($r()));
+  _redoStack.push(cur);
+  var prev = _undoStack.pop();
+  restoreSnapshot(prev);
+  updateUndoUI();
+  toast('元に戻しました');
+}
+function redo() {
+  if (_redoStack.length === 0) return;
+  var cur = JSON.stringify(serializeTree($r()));
+  _undoStack.push(cur);
+  var next = _redoStack.pop();
+  restoreSnapshot(next);
+  updateUndoUI();
+  toast('やり直しました');
+}
+function restoreSnapshot(json) {
+  _undoBusy = true;
+  try {
+    $r().innerHTML = '';
+    buildTree($r(), JSON.parse(json));
+    updateCount();
+    scheduleSave();
+  } finally {
+    _undoBusy = false;
+  }
+}
+function updateUndoUI() {
+  var u = $('htl-undo'), r = $('htl-redo');
+  u.disabled = _undoStack.length === 0;
+  r.disabled = _redoStack.length === 0;
+}
+
+/* ======================================================
+   DEPTH COLORS (light / dark aware)
+====================================================== */
+var DEPTH_COLORS_LIGHT = ['#dbeafe','#ffedd5','#dcfce7','#f3e8ff','#fef9c3','#fce7f3'];
+var DEPTH_COLORS_DARK  = ['#1e3a5f','#431407','#14532d','#3b0764','#422006','#500724'];
+
+function isDark() { return document.body.classList.contains('dark'); }
+function getDepthColor(depth) {
+  var arr = isDark() ? DEPTH_COLORS_DARK : DEPTH_COLORS_LIGHT;
+  return arr[Math.min(depth, arr.length - 1)];
+}
+
+var COLOR_SWATCHES = [
+  '#fce7f3','#fce8cc','#fef9c3','#dcfce7','#dbeafe','#ede9fe','#f3e8ff','#ccfbf1',
+  '#fbcfe8','#fdba74','#fde047','#86efac','#93c5fd','#c4b5fd','#d8b4fe','#6ee7b7',
+  '#f9a8d4','#fb923c','#facc15','#4ade80','#60a5fa','#a78bfa','#c084fc','#34d399',
+  '#ffffff','#f5f5f5','#e5e5e5','#d4d4d4','#a3a3a3','#737373','#404040','#1a1a1a',
+];
+
+function getNodeDepth(li) {
+  var d = 0, cur = li.parentElement;
+  while (cur) {
+    if (cur.classList && cur.classList.contains('htl-ul')) {
+      if (cur.id === 'htl-root') break;
+      d++;
+    }
+    cur = cur.parentElement;
+  }
+  return d;
+}
+
+function $r() { return document.getElementById('htl-root'); }
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function rgbToHex(col) {
+  if (!col) return '#ffffff';
+  if (col.charAt(0) === '#') return col;
+  var m = col.match(/\d+/g);
+  if (!m || m.length < 3) return '#ffffff';
+  return '#' + ((1<<24)+(parseInt(m[0])<<16)+(parseInt(m[1])<<8)+parseInt(m[2])).toString(16).slice(1);
+}
+function toast(msg, isErr) {
+  var t = $('htl-toast');
+  t.textContent = msg;
+  t.className = 'htl-toast show' + (isErr ? ' err' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.className = 'htl-toast'; }, 2600);
+}
+function flashMsg(id, txt) {
+  var el = $(id); if (!el) return;
+  el.textContent = txt; el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); }, 2000);
+}
+function countNodes() { return $r().querySelectorAll('.htl-li').length; }
+function updateCount() { $('htl-node-count').textContent = 'ノード: ' + countNodes(); }
+
+function scheduleSave() {
+  if (_undoBusy) return;
+  var dot = $('htl-dot'), lbl = $('htl-save-label');
+  dot.className = 'htl-dot saving'; lbl.textContent = '保存中...';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeTree($r())));
+      dot.className = 'htl-dot saved'; lbl.textContent = '保存済み';
+      setTimeout(function(){ dot.className = 'htl-dot'; lbl.textContent = '自動保存'; }, 2000);
+    } catch(e) {
+      dot.className = 'htl-dot'; lbl.textContent = '保存失敗';
+    }
+  }, 800);
+}
+
+/* ======================================================
+   VIDEO URL PARSER
+====================================================== */
+function parseVideoUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+  var yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (yt) return { type:'youtube', id:yt[1] };
+  var vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vm) return { type:'vimeo', id:vm[1] };
+  var nc = url.match(/nicovideo\.jp\/watch\/((?:sm|nm|so|lv)\d+|\d+)/);
+  if (nc) return { type:'nicovideo', id:nc[1] };
+  var dm = url.match(/(?:dailymotion\.com\/video\/|dai\.ly\/)([a-zA-Z0-9]+)/);
+  if (dm) return { type:'dailymotion', id:dm[1] };
+  if (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) return { type:'direct', url:url };
+  return null;
+}
+function buildEmbedHtml(p) {
+  if (!p) return null;
+  if (p.type==='youtube') return '<iframe src="https://www.youtube.com/embed/'+p.id+'?rel=0&autoplay=0" allowfullscreen></iframe>';
+  if (p.type==='vimeo')   return '<iframe src="https://player.vimeo.com/video/'+p.id+'?autoplay=0" allowfullscreen></iframe>';
+  if (p.type==='nicovideo') return '<iframe src="https://embed.nicovideo.jp/watch/'+p.id+'?autoplay=0" allowfullscreen></iframe>';
+  if (p.type==='dailymotion') return '<iframe src="https://www.dailymotion.com/embed/video/'+p.id+'?autoplay=0" allowfullscreen></iframe>';
+  if (p.type==='direct')  return '<video controls preload="metadata" src="'+esc(p.url)+'"></video>';
+  return null;
+}
+
+/* ======================================================
+   SERIALIZE / DESERIALIZE
+====================================================== */
+function serializeTree(ul) {
+  var res = [];
+  Array.from(ul.children).forEach(function(li) {
+    if (!li.classList.contains('htl-li')) return;
+    var nc = li.querySelector(':scope > .htl-node-wrap > .htl-node-content');
+    if (!nc) return;
+    var sp = nc.querySelector('.htl-text');
+    var sub = li.querySelector(':scope > .htl-ul');
+    res.push({
+      text: sp ? sp.innerHTML : '',
+      color: nc.style.backgroundColor || '',
+      collapsed: li.classList.contains('htl-collapsed'),
+      annotation: getAnnotation(li),
+      children: sub ? serializeTree(sub) : []
+    });
+  });
+  return res;
+}
+function getAnnotation(li) {
+  var div = li.querySelector(':scope > .htl-annotation');
+  if (!div) return { html:'' };
+  var ed = div.querySelector('.htl-anno-editor');
+  return { html: ed ? ed.innerHTML : '' };
+}
+function buildTree(ul, data) {
+  if (!Array.isArray(data)) return;
+  data.forEach(function(nd) {
+    if (!nd) return;
+    var anno = { html:'' };
+    if (nd.annotation) {
+      if (typeof nd.annotation === 'string') anno.html = nd.annotation;
+      else anno.html = nd.annotation.html || nd.annotation.text || '';
+    }
+    var li = createNode(ul, nd.text||'', null, nd.color||'', anno, nd.collapsed);
+    if (nd.children && nd.children.length > 0) {
+      var sub = document.createElement('ul');
+      sub.className = 'htl-ul';
+      li.appendChild(sub);
+      buildTree(sub, nd.children);
+    }
+    updateCollapseBtn(li);
+  });
+}
+
+/* ======================================================
+   CREATE NODE
+====================================================== */
+function createNode(parentUl, text, insertBefore, bgColor, annotation, collapsed) {
+  annotation = annotation || { html:'' };
+
+  var li = document.createElement('li');
+  li.className = 'htl-li';
+  if (insertBefore) parentUl.insertBefore(li, insertBefore);
+  else parentUl.appendChild(li);
+
+  if (!bgColor) {
+    bgColor = getDepthColor(getNodeDepth(li));
+  }
+  if (collapsed) li.classList.add('htl-collapsed');
+
+  /* ------ WRAP ------ */
+  var wrap = document.createElement('div');
+  wrap.className = 'htl-node-wrap';
+
+  /* drag handle */
+  var handle = document.createElement('div');
+  handle.className = 'htl-drag-handle';
+  handle.setAttribute('draggable','true');
+  handle.innerHTML = '<svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>';
+
+  /* node content */
+  var nc = document.createElement('div');
+  nc.className = 'htl-node-content';
+  nc.style.backgroundColor = bgColor;
+
+  /* collapse button */
+  var colBtn = document.createElement('button');
+  colBtn.className = 'htl-collapse-btn no-children';
+  colBtn.title = '折りたたみ切替';
+  colBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+  if (li.classList.contains('htl-collapsed')) colBtn.classList.add('collapsed');
+  colBtn.onclick = function(e) {
+    e.stopPropagation();
+    snapshot();
+    li.classList.toggle('htl-collapsed');
+    colBtn.classList.toggle('collapsed', li.classList.contains('htl-collapsed'));
+    scheduleSave();
+  };
+
+  /* RTE BAR */
+  var rteBar = document.createElement('div');
+  rteBar.className = 'htl-rte-bar';
+
+  function mkRteBtn(html, title, cmd, val) {
+    var b = document.createElement('button');
+    b.className = 'htl-rte-btn'; b.title = title; b.innerHTML = html;
+    b.onmousedown = function(e) {
+      e.preventDefault();
+      document.execCommand(cmd, false, val||null);
+      span.focus(); scheduleSave();
+    };
+    return b;
+  }
+  rteBar.appendChild(mkRteBtn('<b>B</b>','太字','bold'));
+  rteBar.appendChild(mkRteBtn('<i>I</i>','斜体','italic'));
+  rteBar.appendChild(mkRteBtn('<u>U</u>','下線','underline'));
+  rteBar.appendChild(mkRteBtn('<s>S</s>','取り消し線','strikeThrough'));
+  rteBar.appendChild(mkRteBtn('★','ハイライト','hiliteColor','#fde047'));
+
+  var rs1 = document.createElement('div'); rs1.className = 'htl-rte-sep'; rteBar.appendChild(rs1);
+
+  /* text color */
+  var cw = document.createElement('div'); cw.className = 'htl-rte-color-wrap'; cw.title = '文字色';
+  cw.innerHTML = '<span style="font-weight:700;font-size:.85rem;color:#ea580c;pointer-events:none">A</span>';
+  var ci = document.createElement('input'); ci.type = 'color'; ci.value = '#ea580c';
+  ci.addEventListener('input', function(e){ document.execCommand('foreColor',false,e.target.value); span.focus(); scheduleSave(); });
+  cw.appendChild(ci); rteBar.appendChild(cw);
+
+  /* font size */
+  var fs = document.createElement('select'); fs.className = 'htl-rte-fontsize'; fs.title = 'フォントサイズ';
+  [['1','小'],['2','小2'],['3','中'],['4','大'],['5','特大'],['6','最大']].forEach(function(o){
+    var op = document.createElement('option'); op.value=o[0]; op.textContent=o[1];
+    if (o[0]==='3') op.selected=true; fs.appendChild(op);
+  });
+  fs.onchange = function(){ document.execCommand('fontSize',false,fs.value); span.focus(); scheduleSave(); };
+  rteBar.appendChild(fs);
+
+  var rs2 = document.createElement('div'); rs2.className = 'htl-rte-sep'; rteBar.appendChild(rs2);
+
+  /* link */
+  var lb = document.createElement('button'); lb.className='htl-rte-btn'; lb.title='リンク';
+  lb.innerHTML='<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  lb.onmousedown=function(e){
+    e.preventDefault();
+    var url=prompt('リンク先URL:','https://');
+    if(url){ document.execCommand('createLink',false,url); span.querySelectorAll('a').forEach(function(a){a.target='_blank';}); scheduleSave(); }
+  };
+  rteBar.appendChild(lb);
+
+  var rs3 = document.createElement('div'); rs3.className='htl-rte-sep'; rteBar.appendChild(rs3);
+  var rb2 = document.createElement('button'); rb2.className='htl-rte-btn'; rb2.title='書式リセット';
+  rb2.innerHTML='<span style="font-size:.75rem;font-family:monospace">✕A</span>';
+  rb2.onmousedown=function(e){ e.preventDefault(); document.execCommand('removeFormat',false,null); document.execCommand('unlink',false,null); span.focus(); scheduleSave(); };
+  rteBar.appendChild(rb2);
+
+  /* TEXT SPAN */
+  var span = document.createElement('span');
+  span.className = 'htl-text';
+  if (text) span.innerHTML = text;
+  span.setAttribute('contenteditable','false');
+
+  span.ondblclick = function(){ startEdit(span, rteBar); };
+  span.onblur = function(e){
+    if (rteBar.contains(e.relatedTarget)) return;
+    endEdit(span, rteBar);
+  };
+  span.onkeydown = function(e){
+    if (e.key==='Enter' && !e.shiftKey){
+      e.preventDefault();
+      endEdit(span, rteBar);
+      snapshot();
+      var newLi = createNode(parentUl,'', li.nextSibling, null, null);
+      updateCollapseBtn(li);
+      startEdit(newLi.querySelector('.htl-text'), newLi.querySelector('.htl-rte-bar'));
+      scheduleSave();
+    }
+    if (e.key==='Tab'){
+      e.preventDefault();
+      endEdit(span, rteBar);
+      snapshot();
+      var ul2 = li.querySelector(':scope > .htl-ul');
+      if (!ul2){ ul2=document.createElement('ul'); ul2.className='htl-ul'; li.appendChild(ul2); }
+      li.classList.remove('htl-collapsed'); colBtn.classList.remove('collapsed');
+      var newLi2 = createNode(ul2,'',null,null,null);
+      updateCollapseBtn(li);
+      startEdit(newLi2.querySelector('.htl-text'), newLi2.querySelector('.htl-rte-bar'));
+      scheduleSave();
+    }
+    if (e.key==='Escape'){ endEdit(span, rteBar); }
+    if (e.key==='F2'){ startEdit(span, rteBar); }
+    if (e.key==='Delete' && span.textContent.trim()==='' && span.getAttribute('contenteditable')==='false'){
+      snapshot();
+      li.remove(); cleanEmptyUls(); scheduleSave(); updateCount();
+    }
+    if (e.key===' ' && span.getAttribute('contenteditable')==='false'){
+      e.preventDefault();
+      var sub2 = li.querySelector(':scope > .htl-ul');
+      if (sub2 && sub2.children.length > 0){
+        snapshot();
+        li.classList.toggle('htl-collapsed');
+        colBtn.classList.toggle('collapsed', li.classList.contains('htl-collapsed'));
+        scheduleSave();
+      }
+    }
+  };
+  span.addEventListener('paste', function(e){
+    e.preventDefault();
+    var t = (e.originalEvent||e).clipboardData.getData('text/plain');
+    document.execCommand('insertText',false,t);
+  });
+  span.addEventListener('mouseup', function(){
+    if (span.getAttribute('contenteditable')==='true'){
+      setTimeout(function(){
+        var sel = window.getSelection();
+        if (sel && sel.toString().length>0 && span.contains(sel.anchorNode)) rteBar.classList.add('visible');
+        else rteBar.classList.remove('visible');
+      },10);
+    }
+  });
+  span.addEventListener('keyup', function(){
+    var sel = window.getSelection();
+    if (sel && sel.toString().length>0 && span.contains(sel.anchorNode)) rteBar.classList.add('visible');
+    else rteBar.classList.remove('visible');
+  });
+
+  /* NODE ACTIONS */
+  var actions = document.createElement('div');
+  actions.className = 'htl-node-actions';
+
+  var addBtn = document.createElement('button');
+  addBtn.className = 'htl-action-btn htl-add'; addBtn.title = '子ノード追加';
+  addBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  addBtn.onclick = function(){
+    snapshot();
+    var ul3 = li.querySelector(':scope > .htl-ul');
+    if (!ul3){ ul3=document.createElement('ul'); ul3.className='htl-ul'; li.appendChild(ul3); }
+    li.classList.remove('htl-collapsed'); colBtn.classList.remove('collapsed');
+    var newLi3 = createNode(ul3,'',null,null,null);
+    updateCollapseBtn(li);
+    startEdit(newLi3.querySelector('.htl-text'), newLi3.querySelector('.htl-rte-bar'));
+    scheduleSave();
+  };
+
+  var noteBtn = document.createElement('button');
+  noteBtn.className = 'htl-action-btn htl-note'; noteBtn.title = 'メモ開閉';
+  noteBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+  /* COLOR BUTTON */
+  var cWrap = document.createElement('div'); cWrap.className = 'htl-color-wrap';
+  var cBtn = document.createElement('button'); cBtn.className = 'htl-color-btn'; cBtn.title = '背景色';
+  cBtn.style.backgroundColor = bgColor;
+
+  var cPopup = document.createElement('div'); cPopup.className = 'htl-color-popup';
+
+  var pl = document.createElement('div'); pl.className = 'htl-popup-label'; pl.textContent = 'カラーパレット';
+  var pg = document.createElement('div'); pg.className = 'htl-palette-grid';
+  COLOR_SWATCHES.forEach(function(col){
+    var sw = document.createElement('button'); sw.className='htl-swatch'; sw.type='button'; sw.title=col; sw.style.backgroundColor=col;
+    if (rgbToHex(bgColor).toLowerCase()===col.toLowerCase()) sw.classList.add('active');
+    sw.onclick=function(){ applyColor(col); cPopup.classList.remove('open'); };
+    pg.appendChild(sw);
+  });
+
+  var pd = document.createElement('div'); pd.className='htl-popup-divider';
+  var dl = document.createElement('div'); dl.className='htl-popup-label'; dl.textContent='階層デフォルト';
+  var dg = document.createElement('div'); dg.style.cssText='display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap';
+  DEPTH_COLORS_LIGHT.forEach(function(col,i){
+    var sw=document.createElement('button'); sw.className='htl-swatch'; sw.type='button';
+    sw.style.cssText='background:'+col+';width:26px;height:20px;border-radius:3px;position:relative;';
+    var lbl=document.createElement('span'); lbl.textContent=i<5?i:'5+';
+    lbl.style.cssText='position:absolute;bottom:1px;right:2px;font-size:.5rem;color:#555;font-weight:700;pointer-events:none;';
+    sw.appendChild(lbl);
+    sw.onclick=function(){ applyColor(col); cPopup.classList.remove('open'); };
+    dg.appendChild(sw);
+  });
+
+  var pd2 = document.createElement('div'); pd2.className='htl-popup-divider';
+  var cl = document.createElement('div'); cl.className='htl-popup-label'; cl.textContent='カスタム';
+  var cr = document.createElement('div'); cr.className='htl-custom-row';
+  var clbl=document.createElement('label'); clbl.textContent='色:';
+  var cci=document.createElement('input'); cci.type='color'; cci.value=rgbToHex(bgColor);
+  var hxi=document.createElement('input'); hxi.type='text'; hxi.className='htl-hex-input'; hxi.placeholder='#ffffff'; hxi.value=rgbToHex(bgColor); hxi.maxLength=7;
+  cci.oninput=function(){ hxi.value=cci.value; applyColor(cci.value); };
+  hxi.oninput=function(){ var v=hxi.value.trim(); if(/^#[0-9a-fA-F]{6}$/.test(v)){ cci.value=v; applyColor(v); } };
+  cr.appendChild(clbl); cr.appendChild(cci); cr.appendChild(hxi);
+
+  var rcb=document.createElement('button'); rcb.type='button'; rcb.className='htl-reset-color-btn'; rcb.textContent='↺ 階層デフォルト色に戻す';
+  rcb.onclick=function(){ applyColor(getDepthColor(getNodeDepth(li))); cPopup.classList.remove('open'); };
+
+  cPopup.appendChild(pl); cPopup.appendChild(pg); cPopup.appendChild(pd);
+  cPopup.appendChild(dl); cPopup.appendChild(dg); cPopup.appendChild(pd2);
+  cPopup.appendChild(cl); cPopup.appendChild(cr); cPopup.appendChild(rcb);
+
+  function applyColor(col){
+    nc.style.backgroundColor = col; cBtn.style.backgroundColor = col;
+    cci.value = col; hxi.value = col;
+    pg.querySelectorAll('.htl-swatch').forEach(function(sw){ sw.classList.toggle('active', sw.title.toLowerCase()===col.toLowerCase()); });
+    scheduleSave();
+  }
+  cBtn.onclick=function(e){
+    e.stopPropagation();
+    var isOpen = cPopup.classList.toggle('open');
+    if (isOpen) {
+      document.querySelectorAll('#htl-app .htl-color-popup.open').forEach(function(p){ if(p!==cPopup) p.classList.remove('open'); });
+    }
+  };
+  cWrap.appendChild(cBtn); cWrap.appendChild(cPopup);
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'htl-action-btn htl-del'; delBtn.title = '削除';
+  delBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  delBtn.onclick = function(){
+    snapshot();
+    var par = li.parentElement;
+    li.remove(); cleanEmptyUls();
+    if (par) {
+      var parLi = par.closest('.htl-li');
+      if (parLi) updateCollapseBtn(parLi);
+    }
+    scheduleSave(); updateCount();
+  };
+
+  actions.appendChild(addBtn);
+  actions.appendChild(noteBtn);
+  actions.appendChild(cWrap);
+  actions.appendChild(delBtn);
+
+  nc.appendChild(colBtn);
+  nc.appendChild(rteBar);
+  nc.appendChild(span);
+  nc.appendChild(actions);
+  wrap.appendChild(handle);
+  wrap.appendChild(nc);
+  li.appendChild(wrap);
+
+  /* ======== ANNOTATION ======== */
+  var annoDiv = document.createElement('div');
+  annoDiv.className = 'htl-annotation';
+  if (annotation.html) annoDiv.classList.add('open');
+
+  var arBar = document.createElement('div'); arBar.className = 'htl-anno-rte-bar';
+  function mkAnnoBtn(html, title, cmd, val){
+    var b=document.createElement('button'); b.className='htl-anno-rte-btn'; b.title=title; b.innerHTML=html; b.type='button';
+    b.onmousedown=function(e){ e.preventDefault(); document.execCommand(cmd,false,val||null); annoEd.focus(); scheduleSave(); };
+    return b;
+  }
+  arBar.appendChild(mkAnnoBtn('<b>B</b>','太字','bold'));
+  arBar.appendChild(mkAnnoBtn('<i>I</i>','斜体','italic'));
+  arBar.appendChild(mkAnnoBtn('<u>U</u>','下線','underline'));
+  arBar.appendChild(mkAnnoBtn('<s>S</s>','取り消し線','strikeThrough'));
+  arBar.appendChild(mkAnnoBtn('★','ハイライト','hiliteColor','#fde047'));
+  var as1=document.createElement('div'); as1.className='htl-anno-rte-sep'; arBar.appendChild(as1);
+
+  var acw=document.createElement('div'); acw.style.cssText='position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:4px;cursor:pointer;';
+  acw.title='文字色';
+  var aci=document.createElement('span'); aci.textContent='A'; aci.style.cssText='font-weight:700;font-size:.8rem;color:#ea580c;pointer-events:none;';
+  var aci2=document.createElement('input'); aci2.type='color'; aci2.value='#ea580c';
+  aci2.style.cssText='position:absolute;opacity:0;width:100%;height:100%;cursor:pointer;';
+  aci2.addEventListener('input',function(e){ document.execCommand('foreColor',false,e.target.value); annoEd.focus(); scheduleSave(); });
+  acw.appendChild(aci); acw.appendChild(aci2); arBar.appendChild(acw);
+
+  var as2=document.createElement('div'); as2.className='htl-anno-rte-sep'; arBar.appendChild(as2);
+
+  // link
+  var alb=document.createElement('button'); alb.className='htl-anno-rte-btn'; alb.type='button'; alb.title='リンク'; alb.innerHTML='🔗'; alb.style.fontSize='.8rem';
+  alb.onmousedown=function(e){
+    e.preventDefault();
+    var url=prompt('リンク先URL:','https://'); if(!url)return;
+    var lbl=prompt('表示テキスト（空でURLそのまま）:','');
+    if(lbl){ var a=document.createElement('a'); a.href=url; a.target='_blank'; a.textContent=lbl; insertAtCaret(annoEd,a); }
+    else { document.execCommand('createLink',false,url); annoEd.querySelectorAll('a').forEach(function(a){ a.target='_blank'; }); }
+    scheduleSave();
+  };
+  arBar.appendChild(alb);
+  var as3=document.createElement('div'); as3.className='htl-anno-rte-sep'; arBar.appendChild(as3);
+
+  // image file
+  var aif=document.createElement('button'); aif.className='htl-anno-rte-btn'; aif.type='button'; aif.title='画像(ファイル)'; aif.textContent='🖼'; aif.style.fontSize='.8rem';
+  aif.onmousedown=function(e){
+    e.preventDefault();
+    var inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange=function(ev){
+      var f=ev.target.files[0]; if(!f)return;
+      var rd=new FileReader();
+      rd.onload=function(re){ saveCaretPos(annoEd); var w=createImgWrap(re.target.result,'300px'); insertAtCaret(annoEd,w); rebindImg(w); scheduleSave(); };
+      rd.readAsDataURL(f);
+    };
+    inp.click();
+  };
+  arBar.appendChild(aif);
+
+  // image url
+  var aiu=document.createElement('button'); aiu.className='htl-anno-rte-btn'; aiu.type='button'; aiu.title='画像(URL)'; aiu.innerHTML='🌐<span style="font-size:.6rem">画像</span>';
+  aiu.onmousedown=function(e){
+    e.preventDefault();
+    var url=prompt('画像URL:'); if(!url)return;
+    saveCaretPos(annoEd); var w=createImgWrap(url,'300px'); insertAtCaret(annoEd,w); rebindImg(w); scheduleSave();
+  };
+  arBar.appendChild(aiu);
+  var as4=document.createElement('div'); as4.className='htl-anno-rte-sep'; arBar.appendChild(as4);
+
+  // video
+  var avb=document.createElement('button'); avb.className='htl-anno-rte-btn'; avb.type='button'; avb.title='動画挿入'; avb.innerHTML='▶<span style="font-size:.6rem;margin-left:2px">動画</span>';
+  avb.onmousedown=function(e){
+    e.preventDefault();
+    var url=prompt('動画URL（YouTube/Vimeo/ニコニコ/MP4）:','https://www.youtube.com/watch?v='); if(!url)return;
+    var parsed=parseVideoUrl(url);
+    if(!parsed){ toast('対応していないURLです',true); return; }
+    saveCaretPos(annoEd);
+    var w=createVideoWrap(url,parsed); insertAtCaret(annoEd,w); rebindVideo(w);
+    toast('動画を挿入しました'); scheduleSave();
+  };
+  arBar.appendChild(avb);
+  var as5=document.createElement('div'); as5.className='htl-anno-rte-sep'; arBar.appendChild(as5);
+
+  // reset format
+  var areset=document.createElement('button'); areset.className='htl-anno-rte-btn'; areset.type='button'; areset.title='書式リセット';
+  areset.innerHTML='<span style="font-size:.7rem;font-family:monospace">✕A</span>';
+  areset.onmousedown=function(e){ e.preventDefault(); document.execCommand('removeFormat',false,null); document.execCommand('unlink',false,null); annoEd.focus(); scheduleSave(); };
+  arBar.appendChild(areset);
+
+  var annoEd = document.createElement('div');
+  annoEd.className = 'htl-anno-editor';
+  annoEd.setAttribute('contenteditable','true');
+  annoEd.setAttribute('data-placeholder','注釈を入力… 🖼 ▶ ボタンで画像・動画を挿入できます');
+  annoEd.addEventListener('input', scheduleSave);
+  annoEd.addEventListener('paste', function(e){
+    var items = e.clipboardData && e.clipboardData.items;
+    if (items) for (var i=0;i<items.length;i++) {
+      if (items[i].type.indexOf('image')!==-1) {
+        e.preventDefault();
+        var f=items[i].getAsFile(); if(!f)return;
+        var rd=new FileReader();
+        rd.onload=function(re){ saveCaretPos(annoEd); var w=createImgWrap(re.target.result,'300px'); insertAtCaret(annoEd,w); rebindImg(w); scheduleSave(); };
+        rd.readAsDataURL(f); return;
+      }
+    }
+  });
+
+  if (annotation.html) {
+    annoEd.innerHTML = annotation.html;
+    setTimeout(function(){
+      annoEd.querySelectorAll('.htl-inline-img-wrap').forEach(rebindImg);
+      annoEd.querySelectorAll('.htl-inline-video-wrap').forEach(function(w){
+        var url=w.dataset.videoUrl; if(!url)return;
+        var parsed=parseVideoUrl(url); if(!parsed)return;
+        if (!w.querySelector('.htl-inline-video-inner')) rebuildVideoInner(w,url,parsed);
+        rebindVideo(w);
+      });
+    }, 0);
+  }
+
+  annoDiv.appendChild(arBar);
+  annoDiv.appendChild(annoEd);
+  li.appendChild(annoDiv);
+
+  noteBtn.onclick = function(){
+    var isOpen = annoDiv.classList.toggle('open');
+    noteBtn.classList.toggle('open', isOpen);
+    if (isOpen) setTimeout(function(){ annoEd.focus(); }, 50);
+  };
+  if (annotation.html) noteBtn.classList.add('open');
+
+  setupDrag(li, handle);
+  setupTouchDrag(li, handle);
+
+  updateCount();
+  return li;
+}
+
+function updateCollapseBtn(li) {
+  var btn = li.querySelector(':scope > .htl-node-wrap > .htl-node-content > .htl-collapse-btn');
+  if (!btn) return;
+  var sub = li.querySelector(':scope > .htl-ul');
+  var hasChildren = sub && sub.children.length > 0;
+  btn.classList.toggle('no-children', !hasChildren);
+  btn.classList.toggle('collapsed', li.classList.contains('htl-collapsed'));
+}
+
+function startEdit(span, rteBar) {
+  span.setAttribute('contenteditable','true');
+  span.focus();
+  var range = document.createRange();
+  range.selectNodeContents(span); range.collapse(false);
+  var sel = window.getSelection();
+  if (sel){ sel.removeAllRanges(); sel.addRange(range); }
+}
+function endEdit(span, rteBar) {
+  span.setAttribute('contenteditable','false');
+  if (rteBar) rteBar.classList.remove('visible');
+  scheduleSave();
+}
+
+/* ======================================================
+   CARET / INSERT UTILITIES
+====================================================== */
+var _savedRange = null;
+function saveCaretPos(editor) {
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount>0 && editor.contains(sel.anchorNode)) _savedRange = sel.getRangeAt(0).cloneRange();
+  else _savedRange = null;
+}
+function insertAtCaret(editor, node) {
+  editor.focus();
+  var sel = window.getSelection(), range;
+  if (_savedRange) { range=_savedRange.cloneRange(); _savedRange=null; }
+  else if (sel && sel.rangeCount>0 && editor.contains(sel.anchorNode)) range=sel.getRangeAt(0);
+  else { range=document.createRange(); range.selectNodeContents(editor); range.collapse(false); }
+  range.deleteContents();
+  // カーソルが行末にあれば改行なしで挿入、行中なら前にのみ改行
+  var atEnd = range.endContainer === editor || (range.endContainer.nodeType===3 && range.endOffset===range.endContainer.length);
+  if (!atEnd) {
+    var brPre=document.createElement('br');
+    range.insertNode(brPre);
+    range.setStartAfter(brPre); range.collapse(true);
+  }
+  range.insertNode(node);
+  // 後続カーソル位置用に改行1つ
+  var brPost=document.createElement('br');
+  range.setStartAfter(node); range.collapse(true);
+  range.insertNode(brPost);
+  var nr=document.createRange(); nr.setStartAfter(brPost); nr.collapse(true);
+  sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(nr);
+}
+
+/* ======================================================
+   INLINE IMAGE WIDGET
+====================================================== */
+function createImgWrap(src, width) {
+  var wrap=document.createElement('div');
+  wrap.className='htl-inline-img-wrap'; wrap.contentEditable='false';
+  wrap.dataset.imgSrc=src; wrap.dataset.imgWidth=width||'300px';
+
+  var img=document.createElement('img');
+  img.src=src; img.style.width=width||'300px'; img.style.maxWidth='100%'; img.draggable=false;
+
+  var tb=document.createElement('div'); tb.className='htl-inline-img-toolbar';
+  var db=document.createElement('button'); db.type='button'; db.className='del'; db.textContent='✕ 削除';
+  db.onclick=function(e){ e.stopPropagation(); rmWrap(wrap); scheduleSave(); };
+  tb.appendChild(db);
+
+  var sr=document.createElement('div'); sr.className='htl-img-slider-row';
+  var slbl=document.createElement('span'); slbl.textContent='幅:';
+  var sl=document.createElement('input'); sl.type='range'; sl.min='1'; sl.max='800'; sl.value=parseInt(width)||300;
+  var ni=document.createElement('input'); ni.type='number'; ni.min='1'; ni.max='9999'; ni.value=parseInt(width)||300;
+  var ul=document.createElement('span'); ul.textContent='px';
+  var pw=document.createElement('div'); pw.style.cssText='display:flex;gap:3px;';
+  [[150,'150'],[300,'300'],[500,'500'],[100,'全幅%']].forEach(function(p){
+    var pb=document.createElement('button'); pb.type='button'; pb.textContent=p[1];
+    pb.onclick=function(){
+      if(p[0]===100&&p[1].indexOf('%')!==-1){ img.style.width='100%'; sl.value=800; ni.value=100; ul.textContent='%'; wrap.dataset.imgWidth='100%'; }
+      else { img.style.width=p[0]+'px'; sl.value=p[0]; ni.value=p[0]; ul.textContent='px'; wrap.dataset.imgWidth=p[0]+'px'; }
+      scheduleSave();
+    };
+    pw.appendChild(pb);
+  });
+  function applyW(v){ v=Math.max(1,parseInt(v)||1); img.style.width=v+'px'; sl.value=Math.min(v,800); ni.value=v; ul.textContent='px'; wrap.dataset.imgWidth=v+'px'; scheduleSave(); }
+  sl.oninput=function(){ applyW(sl.value); }; ni.oninput=function(){ applyW(ni.value); };
+  sr.appendChild(slbl); sr.appendChild(sl); sr.appendChild(ni); sr.appendChild(ul); sr.appendChild(pw);
+
+  var rh=document.createElement('div'); rh.className='htl-resize-handle';
+  rh.innerHTML='<svg viewBox="0 0 10 10"><line x1="2" y1="8" x2="8" y2="2"/><line x1="5" y1="8" x2="8" y2="5"/></svg>';
+  var _rx=0,_rw=0,_rres=false;
+  rh.addEventListener('mousedown',function(e){
+    e.preventDefault(); e.stopPropagation(); _rres=true; _rx=e.clientX; _rw=img.offsetWidth;
+    document.addEventListener('mousemove',onRMove); document.addEventListener('mouseup',onRUp);
+  });
+  function onRMove(e){ if(!_rres)return; var nw=Math.max(30,_rw+(e.clientX-_rx)); img.style.width=nw+'px'; sl.value=Math.min(nw,800); ni.value=nw; wrap.dataset.imgWidth=nw+'px'; }
+  function onRUp(){ _rres=false; document.removeEventListener('mousemove',onRMove); document.removeEventListener('mouseup',onRUp); scheduleSave(); }
+
+  wrap.appendChild(img); wrap.appendChild(tb); wrap.appendChild(sr); wrap.appendChild(rh);
+  wrap.addEventListener('click',function(e){ e.stopPropagation(); deselectMedia(); wrap.classList.add('selected'); });
+  return wrap;
+}
+function rmWrap(wrap){
+  var prev=wrap.previousSibling, next=wrap.nextSibling;
+  wrap.remove();
+  // 前後の孤立した改行要素を除去
+  if (prev && prev.nodeType===1 && (prev.tagName==='BR' || (prev.tagName==='DIV'&&(prev.innerHTML==='<br>'||prev.innerHTML==='')))) prev.remove();
+  if (next && next.nodeType===1 && (next.tagName==='BR' || (next.tagName==='DIV'&&(next.innerHTML==='<br>'||next.innerHTML==='')))) next.remove();
+}
+function rebindImg(wrap){
+  var src=wrap.dataset.imgSrc, width=wrap.dataset.imgWidth||'300px';
+  if (!src){ var ei=wrap.querySelector('img'); if(ei){ src=ei.src; width=ei.style.width||'300px'; } }
+  if (!src) return;
+  wrap.innerHTML=''; wrap.contentEditable='false';
+  var nb=createImgWrap(src,width);
+  while(nb.firstChild) wrap.appendChild(nb.firstChild);
+}
+
+/* ======================================================
+   INLINE VIDEO WIDGET
+====================================================== */
+function createVideoWrap(url, parsed){
+  var wrap=document.createElement('div');
+  wrap.className='htl-inline-video-wrap'; wrap.contentEditable='false'; wrap.dataset.videoUrl=url;
+  rebuildVideoInner(wrap,url,parsed);
+  return wrap;
+}
+function rebuildVideoInner(wrap,url,parsed){
+  wrap.innerHTML=''; wrap.contentEditable='false'; wrap.dataset.videoUrl=url;
+  // デフォルト幅 100%
+  var curWidth = wrap.dataset.videoWidth || '100%';
+  wrap.style.width = curWidth;
+
+  var embedHtml=buildEmbedHtml(parsed); if(!embedHtml)return;
+  var inner=document.createElement('div'); inner.className='htl-inline-video-inner'; inner.innerHTML=embedHtml;
+
+  // ツールバー（ホバー時）
+  var tb=document.createElement('div'); tb.className='htl-inline-video-toolbar';
+  var tn={'youtube':'YouTube','vimeo':'Vimeo','nicovideo':'ニコニコ','dailymotion':'Dailymotion','direct':'動画'};
+  var tl=document.createElement('span'); tl.style.cssText='font-size:.68rem;color:#aaa;padding:0 4px;font-family:monospace;'; tl.textContent='▶ '+(tn[parsed.type]||'動画');
+  tb.appendChild(tl);
+  var db=document.createElement('button'); db.type='button'; db.className='del'; db.textContent='✕ 削除';
+  db.onclick=function(e){ e.stopPropagation(); rmWrap(wrap); scheduleSave(); };
+  tb.appendChild(db);
+
+  // 幅スライダー行
+  var sr=document.createElement('div'); sr.className='htl-video-slider-row';
+  var slbl=document.createElement('span'); slbl.textContent='幅:';
+  var sl=document.createElement('input'); sl.type='range'; sl.min='10'; sl.max='100'; sl.value=parseInt(curWidth)||100;
+  var ni=document.createElement('input'); ni.type='number'; ni.min='10'; ni.max='100'; ni.value=parseInt(curWidth)||100;
+  var ul=document.createElement('span'); ul.textContent='%';
+  // プリセット
+  var pw=document.createElement('div'); pw.style.cssText='display:flex;gap:3px;';
+  [40,60,80,100].forEach(function(p){
+    var pb=document.createElement('button'); pb.type='button'; pb.textContent=p+'%';
+    pb.onclick=function(){ applyVWidth(p); scheduleSave(); };
+    pw.appendChild(pb);
+  });
+  function applyVWidth(v){
+    v=Math.max(10,Math.min(100,parseInt(v)||100));
+    wrap.style.width=v+'%'; wrap.dataset.videoWidth=v+'%';
+    sl.value=v; ni.value=v;
+  }
+  sl.oninput=function(){ applyVWidth(sl.value); scheduleSave(); };
+  ni.oninput=function(){ applyVWidth(ni.value); scheduleSave(); };
+  sr.appendChild(slbl); sr.appendChild(sl); sr.appendChild(ni); sr.appendChild(ul); sr.appendChild(pw);
+
+  // リサイズハンドル（右下角ドラッグ）
+  var rh=document.createElement('div'); rh.className='htl-video-resize-handle';
+  rh.innerHTML='<svg viewBox="0 0 10 10"><line x1="2" y1="8" x2="8" y2="2"/><line x1="5" y1="8" x2="8" y2="5"/></svg>';
+  rh.title='ドラッグして幅を変更';
+  var _rx=0,_rw=0,_rres=false;
+  rh.addEventListener('mousedown',function(e){
+    e.preventDefault(); e.stopPropagation(); _rres=true; _rx=e.clientX;
+    _rw=wrap.offsetWidth;
+    var parent=wrap.parentElement;
+    document.addEventListener('mousemove',onRMove); document.addEventListener('mouseup',onRUp);
+    function onRMove(e2){
+      if(!_rres)return;
+      var parent=wrap.parentElement; if(!parent)return;
+      var pW=parent.offsetWidth||600;
+      var nw=Math.max(10,Math.min(100,Math.round((_rw+(e2.clientX-_rx))/pW*100)));
+      applyVWidth(nw);
+    }
+    function onRUp(){ _rres=false; document.removeEventListener('mousemove',onRMove); document.removeEventListener('mouseup',onRUp); scheduleSave(); }
+  });
+
+  wrap.appendChild(inner); wrap.appendChild(tb); wrap.appendChild(sr); wrap.appendChild(rh);
+  wrap.addEventListener('click',function(e){ e.stopPropagation(); deselectMedia(); wrap.classList.add('selected'); });
+}
+function rebindVideo(wrap){
+  var url=wrap.dataset.videoUrl; if(!url)return;
+  var parsed=parseVideoUrl(url); if(!parsed)return;
+  if (!wrap.querySelector('.htl-inline-video-inner')) rebuildVideoInner(wrap,url,parsed);
+}
+function deselectMedia(){
+  document.querySelectorAll('#htl-app .htl-inline-img-wrap.selected, #htl-app .htl-inline-video-wrap.selected')
+    .forEach(function(el){ el.classList.remove('selected'); });
+}
+
+/* ======================================================
+   CLEAN EMPTY ULS
+====================================================== */
+function cleanEmptyUls(){
+  $r().querySelectorAll('.htl-ul').forEach(function(ul){
+    if (ul.children.length===0 && ul!==($r())) ul.remove();
+  });
+  // update all collapse buttons
+  $r().querySelectorAll('.htl-li').forEach(updateCollapseBtn);
+}
+
+/* ======================================================
+   DRAG & DROP (Mouse)
+====================================================== */
+function ensureDragGlobal(){
+  if (_dragGlobalReady) return; _dragGlobalReady=true;
+  document.addEventListener('dragover',function(e){
+    if (!dragState.el) return;
+    var app=document.getElementById(APP_ID); if(!app||!app.contains(e.target))return;
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    var target=getTargetLi(e.clientX,e.clientY);
+    if (!target||target===dragState.el||dragState.el.contains(target))return;
+    clearDragHl();
+    var nc=target.querySelector(':scope > .htl-node-wrap > .htl-node-content'); if(!nc)return;
+    var rect=nc.getBoundingClientRect();
+    var pctY=(e.clientY-rect.top)/rect.height, pctX=(e.clientX-rect.left)/rect.width;
+    var ph=dragState.placeholder;
+    if (pctY<0.35){ target.before(ph); target.classList.add('htl-drop-before'); }
+    else if (pctY>0.65){ target.after(ph); target.classList.add('htl-drop-after'); }
+    else if (pctX>0.4){
+      var ul=target.querySelector(':scope > .htl-ul');
+      if (!ul){ ul=document.createElement('ul'); ul.className='htl-ul'; target.appendChild(ul); }
+      if (ul.firstChild!==ph) ul.insertBefore(ph,ul.firstChild);
+      target.classList.add('htl-drop-child');
+    } else { target.after(ph); target.classList.add('htl-drop-after'); }
+  });
+  document.addEventListener('drop',function(e){
+    if (!dragState.el) return;
+    var app=document.getElementById(APP_ID); if(!app||!app.contains(e.target))return;
+    e.preventDefault(); clearDragHl();
+  });
+}
+function getTargetLi(cx,cy){
+  var ph=dragState.placeholder; if(ph)ph.style.pointerEvents='none';
+  var el=document.elementFromPoint(cx,cy); if(ph)ph.style.pointerEvents='';
+  if(!el)return null;
+  var cur=el;
+  while(cur&&cur!==document.body){ if(cur.classList&&cur.classList.contains('htl-li')&&cur!==ph)return cur; cur=cur.parentElement; }
+  return null;
+}
+function setupDrag(li,handle){
+  handle.addEventListener('dragstart',function(e){
+    ensureDragGlobal(); dragState.el=li;
+    e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','');
+    var ph=document.createElement('li'); ph.className='htl-placeholder';
+    var nc=li.querySelector('.htl-node-content');
+    ph.style.height=Math.max(nc?nc.offsetHeight:34,32)+'px';
+    dragState.placeholder=ph; li.after(ph);
+    setTimeout(function(){ li.classList.add('htl-dragging'); },0);
+    e.stopPropagation();
+  });
+  handle.addEventListener('dragend',function(){
+    li.classList.remove('htl-dragging'); clearDragHl();
+    var ph=dragState.placeholder;
+    if(ph&&ph.parentNode){ snapshot(); ph.replaceWith(li); } else if(ph) ph.remove();
+    dragState.el=null; dragState.placeholder=null;
+    cleanEmptyUls(); scheduleSave(); updateCount();
+  });
+}
+
+/* ======================================================
+   TOUCH DRAG (Mobile)
+====================================================== */
+function setupTouchDrag(li, handle) {
+  var touchState = { active: false, startX:0, startY:0, clone:null, lastTarget:null };
+  handle.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    var t = e.touches[0];
+    touchState.active = true;
+    touchState.startX = t.clientX;
+    touchState.startY = t.clientY;
+    // create visual clone
+    var clone = li.cloneNode(true);
+    clone.style.cssText = 'position:fixed;pointer-events:none;opacity:.7;z-index:9999;width:'+li.offsetWidth+'px;left:'+t.clientX+'px;top:'+t.clientY+'px;';
+    document.body.appendChild(clone);
+    touchState.clone = clone;
+    li.classList.add('htl-dragging');
+    snapshot();
+  }, {passive:false});
+  handle.addEventListener('touchmove', function(e){
+    if (!touchState.active) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    if (touchState.clone) {
+      touchState.clone.style.left = t.clientX + 'px';
+      touchState.clone.style.top  = t.clientY + 'px';
+    }
+    // find target
+    if (touchState.clone) touchState.clone.style.display='none';
+    var el = document.elementFromPoint(t.clientX, t.clientY);
+    if (touchState.clone) touchState.clone.style.display='';
+    clearDragHl();
+    var target = el;
+    while(target && !target.classList.contains('htl-li')) target = target.parentElement;
+    if (target && target !== li && !li.contains(target)) {
+      var nc = target.querySelector(':scope > .htl-node-wrap > .htl-node-content');
+      if (nc) {
+        var rect = nc.getBoundingClientRect();
+        var pctY = (t.clientY - rect.top) / rect.height;
+        touchState.lastTarget = { el: target, before: pctY < 0.4, after: pctY > 0.6, child: pctY >= 0.4 && pctY <= 0.6 };
+        if (pctY < 0.4) target.classList.add('htl-drop-before');
+        else if (pctY > 0.6) target.classList.add('htl-drop-after');
+        else target.classList.add('htl-drop-child');
+      }
+    }
+  }, {passive:false});
+  handle.addEventListener('touchend', function(){
+    li.classList.remove('htl-dragging');
+    if (touchState.clone) { touchState.clone.remove(); touchState.clone=null; }
+    if (touchState.lastTarget) {
+      var t = touchState.lastTarget;
+      if (t.before) t.el.before(li);
+      else if (t.after) t.el.after(li);
+      else {
+        var ul = t.el.querySelector(':scope > .htl-ul');
+        if (!ul) { ul=document.createElement('ul'); ul.className='htl-ul'; t.el.appendChild(ul); }
+        ul.insertBefore(li, ul.firstChild);
+        t.el.classList.remove('htl-collapsed');
+        var cb = t.el.querySelector(':scope > .htl-node-wrap > .htl-node-content > .htl-collapse-btn');
+        if (cb) cb.classList.remove('collapsed');
+      }
+    }
+    clearDragHl();
+    touchState.active = false; touchState.lastTarget = null;
+    cleanEmptyUls(); scheduleSave(); updateCount();
+  });
+}
+
+function clearDragHl(){
+  document.querySelectorAll('#htl-app .htl-drop-before,.htl-drop-after,.htl-drop-child')
+    .forEach(function(el){ el.classList.remove('htl-drop-before','htl-drop-after','htl-drop-child'); });
+}
+
+/* ======================================================
+   HTML EXPORT (v15ロジック継承)
+====================================================== */
+/* ── ノードテキスト圧縮 ──────────────────────────
+   execCommandが生成するfontタグ/spanタグをCSSインラインに変換し
+   冗長な属性・空タグを除去してバイト数を削減する */
+function compressNodeHtml(html){
+  if (!html) return '';
+  var tmp=document.createElement('div'); tmp.innerHTML=html;
+
+  // <font size="N"> → <span style="font-size:Xpx">
+  var sizeMap={'1':'10px','2':'13px','3':'16px','4':'18px','5':'24px','6':'32px','7':'48px'};
+  tmp.querySelectorAll('font[size]').forEach(function(f){
+    var sp=document.createElement('span');
+    var sz=sizeMap[f.getAttribute('size')]||'16px';
+    var col=f.style.color||f.getAttribute('color')||'';
+    var css='font-size:'+sz+';';
+    if(col) css+='color:'+col+';';
+    sp.style.cssText=css; sp.innerHTML=f.innerHTML; f.replaceWith(sp);
+  });
+  // <font color="X"> → <span style="color:X">
+  tmp.querySelectorAll('font[color]').forEach(function(f){
+    var sp=document.createElement('span');
+    sp.style.color=f.getAttribute('color'); sp.innerHTML=f.innerHTML; f.replaceWith(sp);
+  });
+  // 残余 <font> → <span>
+  tmp.querySelectorAll('font').forEach(function(f){
+    var sp=document.createElement('span'); sp.innerHTML=f.innerHTML; f.replaceWith(sp);
+  });
+  // 空のspan/divを除去
+  tmp.querySelectorAll('span,div,b,i,u,s,mark').forEach(function(el){
+    if(el.innerHTML.trim()==='') el.remove();
+  });
+  // 隣接する同一style spanをマージ
+  tmp.querySelectorAll('span[style]').forEach(function(sp){
+    var next=sp.nextElementSibling;
+    if(next&&next.tagName==='SPAN'&&next.getAttribute('style')===sp.getAttribute('style')){
+      sp.innerHTML+=next.innerHTML; next.remove();
+    }
+  });
+  return tmp.innerHTML;
+}
+
+/* ── 注釈HTML圧縮 ───────────────────────────────── */
+function cleanAnnoHtml(html){
+  if (!html) return '';
+  var tmp=document.createElement('div'); tmp.innerHTML=html;
+
+  // インライン画像 → <img>
+  tmp.querySelectorAll('.htl-inline-img-wrap').forEach(function(w){
+    var i=w.querySelector('img'); if(!i)return;
+    var src=w.dataset.imgSrc||i.src, width=w.dataset.imgWidth||i.style.width||'300px';
+    var ni=document.createElement('img'); ni.src=src;
+    // widthが100%なら style省略可
+    var wStyle='display:block;max-width:100%;';
+    if(width!=='100%') wStyle+='width:'+width+';';
+    ni.style.cssText=wStyle; w.replaceWith(ni);
+  });
+
+  // インライン動画 → <div class="v">
+  tmp.querySelectorAll('.htl-inline-video-wrap').forEach(function(w){
+    var url=w.dataset.videoUrl, parsed=parseVideoUrl(url);
+    if(!parsed){ w.remove(); return; }
+    var eh=buildEmbedHtml(parsed); if(!eh){ w.remove(); return; }
+    var vWidth=w.dataset.videoWidth||'100%';
+    var vd=document.createElement('div'); vd.className='v';
+    if(vWidth!=='100%') vd.style.width=vWidth;
+    vd.innerHTML=eh; w.replaceWith(vd);
+  });
+
+  // div/brの正規化：<div><br></div>や空div → <br>
+  tmp.querySelectorAll('div').forEach(function(d){
+    if(d.innerHTML==='<br>'||d.innerHTML==='') d.replaceWith(document.createElement('br'));
+  });
+
+  // font圧縮
+  var inner=compressNodeHtml(tmp.innerHTML);
+
+  // 連続br → 最大2つ
+  inner=inner.replace(/(<br\s*\/?>){3,}/gi,'<br><br>');
+  // 先頭末尾の孤立br除去
+  inner=inner.replace(/^(<br\s*\/?>)+/,'').replace(/(<br\s*\/?>)+$/,'');
+  // 空白の正規化（改行・タブ → スペース1つ）
+  inner=inner.replace(/\s{2,}/g,' ').trim();
+  return inner;
+}
+
+function generateHtml(ul, isRoot, depth){
+  isRoot = isRoot===undefined?true:isRoot;
+  depth  = depth||0;
+  var html='';
+  if (isRoot){
+    // CSS: 短縮クラス名で最小化
+    var css='.w{font-family:"Noto Sans JP",Arial,sans-serif;font-size:14px;line-height:1.6;color:#1a1916}'
+      +'.u{list-style:none;padding:0;margin:0}'
+      +'.u .u{padding-left:24px;margin-top:2px}'
+      +'.l{margin:2px 0;position:relative}'
+      +'.u .u>.l::before{content:"";position:absolute;left:-12px;top:0;bottom:0;width:1px;background:#ddd}'
+      +'.n{display:flex;align-items:center;padding:6px 10px;border:1px solid #e8e4dc;border-radius:6px;background:#fff}'
+      +'.h{cursor:pointer}.h:hover{box-shadow:0 2px 6px rgba(0,0,0,.1);border-color:#bbb}'
+      +'.h::after{content:"📝";font-size:10px;margin-left:auto;opacity:.4}'
+      +'.a{display:none;margin:3px 0 6px;padding:10px 12px;border-left:3px solid #2563eb;background:rgba(37,99,235,.04);border-radius:0 6px 6px 0;font-size:13px;line-height:1.6}'
+      +'.o{display:block}.a img{max-width:100%;display:block;margin:5px 0}'
+      +'.a a{color:#2563eb;text-decoration:underline}'
+      +'.v{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:5px;background:#000;margin:6px 0;max-width:100%}'
+      +'.v iframe,.v video{position:absolute;top:0;left:0;width:100%;height:100%;border:none}';
+    // JS: 最小化（注釈トグル）
+    var js='(function(){var w=document.querySelector(".w");if(!w)return;w.addEventListener("click",function(e){if(e.target.tagName.toLowerCase()==="a")return;var t=e.target.closest(".h");if(!t)return;var n=t.nextElementSibling;if(n&&n.classList.contains("a"))n.classList.toggle("o")})})();';
+    html='<style>'+css+'</style><div class="w"><ul class="u">';
+  } else {
+    html='<ul class="u">';
+  }
+
+  Array.from(ul.children).forEach(function(li){
+    if (!li.classList.contains('htl-li')) return;
+    var nc=li.querySelector(':scope > .htl-node-wrap > .htl-node-content'); if(!nc)return;
+    var sp=nc.querySelector('.htl-text');
+    // ノードテキスト圧縮
+    var text=compressNodeHtml(sp?sp.innerHTML:'');
+    var color=nc.style.backgroundColor||'';
+    var anno=getAnnotation(li), hasNote=!!anno.html;
+
+    // style属性：デフォルト白は省略、rgbは#hexに変換
+    var hexColor=color?rgbToHex(color):'';
+    var styleAttr=(hexColor&&hexColor!=='#ffffff'&&hexColor!=='#fffffe')?' style="background:'+hexColor+'"':'';
+    var nodeClass='n'+(hasNote?' h':'');
+
+    html+='<li class="l"><div class="'+nodeClass+'"'+styleAttr+'>'+text+'</div>';
+    if (hasNote){
+      var ah=cleanAnnoHtml(anno.html);
+      html+='<div class="a">'+ah+'</div>';
+    }
+    var subUl=li.querySelector(':scope > .htl-ul');
+    if (subUl&&subUl.children.length>0) html+=generateHtml(subUl,false,depth+1);
+    html+='</li>';
+  });
+
+  html+='</ul>';
+  if (isRoot) html+='</div><script>'+js+'<\/script>';
+  return html;
+}
+function detectBase64(html){ var m=html.match(/src="data:image\//g); return m?m.length:0; }
+function fmtLen(n){ if(n<1000)return n+'文字'; if(n<10000)return (n/1000).toFixed(1)+'k文字'; return Math.round(n/1000)+'k文字'; }
+
+/* ======================================================
+   PREVIEW
+====================================================== */
+function updatePreview(html) {
+  var frame = $('htl-preview-frame');
+  if (!frame) return;
+  var doc = frame.contentDocument || frame.contentWindow.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:12px;}</style></head><body>');
+  doc.write(html);
+  doc.write('</body></html>');
+  doc.close();
+  // auto-height
+  setTimeout(function(){
+    try {
+      var h = doc.body.scrollHeight;
+      frame.style.height = Math.max(h + 20, 220) + 'px';
+    } catch(e) {}
+  }, 100);
+}
+
+/* ======================================================
+   CONTROLS
+====================================================== */
+function openPanel(id){ closeAllPanels(); $(id).classList.add('open'); }
+function closeAllPanels(){ document.querySelectorAll('#htl-app .htl-panel').forEach(function(p){ p.classList.remove('open'); }); var ii=$('htl-html-info'); if(ii)ii.style.display='none'; }
+function copyText(t){
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).catch(function(){ fbCopy(t); });
+  else fbCopy(t);
+}
+function fbCopy(t){ var ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;opacity:0;'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+
+function initControls(){
+  $('htl-add-root').onclick=function(){
+    snapshot();
+    var li=createNode($r(),'',null,null,null);
+    startEdit(li.querySelector('.htl-text'), li.querySelector('.htl-rte-bar'));
+    scheduleSave();
+  };
+  $('htl-clear-all').onclick=function(){
+    if(confirm('現在のリストを全て削除しますか？')){
+      snapshot(); $r().innerHTML=''; updateCount(); scheduleSave(); toast('全ノードを削除しました');
+    }
+  };
+  $('htl-collapse-all').onclick=function(){
+    snapshot();
+    $r().querySelectorAll('.htl-li').forEach(function(li){
+      var sub=li.querySelector(':scope > .htl-ul');
+      if(sub&&sub.children.length>0){
+        li.classList.add('htl-collapsed');
+        var cb=li.querySelector(':scope > .htl-node-wrap > .htl-node-content > .htl-collapse-btn');
+        if(cb) cb.classList.add('collapsed');
+      }
+    });
+    scheduleSave();
+  };
+  $('htl-expand-all').onclick=function(){
+    snapshot();
+    $r().querySelectorAll('.htl-li').forEach(function(li){
+      li.classList.remove('htl-collapsed');
+      var cb=li.querySelector(':scope > .htl-node-wrap > .htl-node-content > .htl-collapse-btn');
+      if(cb) cb.classList.remove('collapsed');
+    });
+    scheduleSave();
+  };
+  $('htl-json-save').onclick=function(){
+    var data=serializeTree($r());
+    $('htl-json-textarea').value=JSON.stringify(data,null,2);
+    openPanel('htl-json-panel');
+  };
+  $('htl-json-copy').onclick=function(){ copyText($('htl-json-textarea').value); flashMsg('htl-json-msg','✓ コピーしました'); };
+  $('htl-import-toggle').onclick=function(){ openPanel('htl-import-panel'); };
+  $('htl-import-exec').onclick=function(){
+    var val=$('htl-import-textarea').value.trim();
+    if(!val){ toast('データがありません',true); return; }
+    try{
+      var data=JSON.parse(val); if(!Array.isArray(data)) throw new Error('配列データではありません');
+      snapshot(); $r().innerHTML=''; buildTree($r(),data); closeAllPanels();
+      toast('読み込み完了（'+countNodes()+' ノード）'); updateCount(); scheduleSave();
+    }catch(err){ toast('読み込み失敗: '+err.message,true); }
+  };
+  $('htl-restore-btn').onclick=function(){
+    try{
+      var raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem('htl_autosave_v15')||localStorage.getItem('htl_autosave_v14');
+      if(!raw){ toast('自動保存データがありません',true); return; }
+      var data=JSON.parse(raw);
+      if(!confirm('自動保存から復元します。現在の内容は消えます。'))return;
+      snapshot(); $r().innerHTML=''; buildTree($r(),data); closeAllPanels();
+      toast('復元しました（'+countNodes()+' ノード）'); updateCount();
+    }catch(e){ toast('復元失敗: '+e.message,true); }
+  };
+  $('htl-html-export').onclick=function(){
+    var html=generateHtml($r());
+    $('htl-html-textarea').value=html;
+    openPanel('htl-html-panel');
+    updatePreview(html);
+    var len=html.length, chEl=$('htl-html-chars');
+    if(chEl) chEl.textContent=fmtLen(len);
+    var ii=$('htl-html-info'), b64=detectBase64(html), msgs=[], style='';
+    if(b64>0){
+      style='background:#fef9c3;border:1px solid #fde047;color:#6d4c00;';
+      msgs.push('⚠️ base64画像が '+b64+'枚 含まれています（'+fmtLen(len)+'）。URLで貼り付けると大幅に短縮できます。');
+    } else if(len>30000){
+      style='background:#ffedd5;border:1px solid #fdba74;color:#5d3200;';
+      msgs.push('⚠️ コードが '+fmtLen(len)+' あります。はてなブログ上限に近い場合は分割を検討してください。');
+    } else {
+      style='background:#dcfce7;border:1px solid #86efac;color:#14532d;';
+      msgs.push('✅ '+fmtLen(len)+' — はてなブログへの貼り付けに適したサイズです。');
+    }
+    ii.style.cssText=style+'padding:8px 10px;border-radius:6px;font-size:.75rem;line-height:1.6;';
+    ii.innerHTML=msgs.join('<br>'); ii.style.display='block';
+  };
+  $('htl-html-copy').onclick=function(){ copyText($('htl-html-textarea').value); flashMsg('htl-html-msg','✓ コピーしました'); };
+
+  // Tab switching
+  document.querySelectorAll('#htl-html-panel .htl-tab').forEach(function(tab){
+    tab.onclick=function(){
+      document.querySelectorAll('#htl-html-panel .htl-tab').forEach(function(t){ t.classList.remove('active'); });
+      document.querySelectorAll('#htl-html-panel .htl-tab-pane').forEach(function(p){ p.classList.remove('active'); });
+      tab.classList.add('active');
+      $('htl-tab-'+tab.dataset.tab).classList.add('active');
+      if (tab.dataset.tab==='preview') updatePreview($('htl-html-textarea').value);
+    };
+  });
+
+  document.querySelectorAll('#htl-app .htl-panel-close').forEach(function(btn){
+    btn.onclick=function(){ var id=btn.getAttribute('data-panel'); if(id) $(id).classList.remove('open'); };
+  });
+
+  // Undo / Redo buttons
+  $('htl-undo').onclick=undo;
+  $('htl-redo').onclick=redo;
+
+  // Dark mode
+  var darkBtn=$('htl-dark-btn');
+  var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+  var savedDark=localStorage.getItem('htl_dark');
+  if(savedDark==='1'||(savedDark===null&&prefersDark)){ document.body.classList.add('dark'); darkBtn.classList.add('on'); }
+  darkBtn.onclick=function(){
+    var d=document.body.classList.toggle('dark');
+    darkBtn.classList.toggle('on',d);
+    localStorage.setItem('htl_dark',d?'1':'0');
+  };
+
+  // Shortcut help
+  $('htl-shortcut-help').onclick=function(){ $('htl-shortcut-overlay').classList.add('open'); };
+  $('htl-shortcut-close').onclick=function(){ $('htl-shortcut-overlay').classList.remove('open'); };
+  $('htl-shortcut-overlay').addEventListener('click',function(e){ if(e.target===$('htl-shortcut-overlay')) $('htl-shortcut-overlay').classList.remove('open'); });
+
+  // Global keyboard shortcuts
+  document.addEventListener('keydown',function(e){
+    var tag=document.activeElement.tagName.toLowerCase();
+    if(tag==='input'||tag==='textarea'||document.activeElement.getAttribute('contenteditable')==='true') {
+      // In editor context: only undo/redo
+      if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); undo(); return; }
+      if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){ e.preventDefault(); redo(); return; }
+      return;
+    }
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){ e.preventDefault(); undo(); }
+    if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))){ e.preventDefault(); redo(); }
+    if((e.ctrlKey||e.metaKey)&&e.key==='ArrowLeft'){ e.preventDefault(); $('htl-collapse-all').click(); }
+    if((e.ctrlKey||e.metaKey)&&e.key==='ArrowRight'){ e.preventDefault(); $('htl-expand-all').click(); }
+  });
+
+  // Close popups on outside click
+  document.addEventListener('click',function(){
+    deselectMedia();
+    document.querySelectorAll('#htl-app .htl-color-popup.open').forEach(function(p){ p.classList.remove('open'); });
+  });
+}
+
+/* ======================================================
+   INIT
+====================================================== */
+function init(){
+  initControls();
+  var restored=false;
+  try{
+    var raw=localStorage.getItem(STORAGE_KEY)||localStorage.getItem('htl_autosave_v15')||localStorage.getItem('htl_autosave_v14')||localStorage.getItem('htl_autosave_v13');
+    if(raw){
+      var data=JSON.parse(raw);
+      if(Array.isArray(data)&&data.length>0){ buildTree($r(),data); updateCount(); restored=true; }
+    }
+  }catch(e){}
+  if(!restored){
+    var li=createNode($r(),'',null,null,null);
+    startEdit(li.querySelector('.htl-text'), li.querySelector('.htl-rte-bar'));
+  }
+  updateUndoUI();
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+
+})();
+</script>
+</body>
+</html>
